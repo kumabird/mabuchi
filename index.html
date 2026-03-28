@@ -563,61 +563,103 @@ async function geocodeAddress(addr) {
 }
 
 /* ────────────────────────────────────────────
-   静的校舎データ（公式サイトより）
+   校舎マスタ（住所のみ。座標は初回起動時にNominatimで解決しキャッシュ）
 ──────────────────────────────────────────── */
-const MABUCHI_SCHOOLS = [
-  // 奈良
-  { name:'馬渕教室 新大宮校',    address:'奈良県奈良市芝辻町2-11-5',              lat:34.6938, lng:135.7974, area:'奈良' },
-  { name:'馬渕教室 学園前校',    address:'奈良県奈良市学園北1-9-1',              lat:34.7010, lng:135.7360, area:'奈良' },
-  { name:'馬渕教室 登美ヶ丘校',  address:'奈良県奈良市右京1-1-1',                lat:34.7167, lng:135.7546, area:'奈良' },
-  { name:'馬渕教室 富雄校',      address:'奈良県奈良市富雄元町2-1-3',            lat:34.6879, lng:135.7235, area:'奈良' },
-  { name:'馬渕教室 高の原校',    address:'京都府木津川市相楽台1-1',              lat:34.7596, lng:135.7631, area:'奈良' },
-  { name:'馬渕教室 白庭台校',    address:'奈良県生駒市白庭台4-6-1',              lat:34.7188, lng:135.7160, area:'奈良' },
-  { name:'馬渕教室 生駒校',      address:'奈良県生駒市元町1-1-3',                lat:34.6982, lng:135.6985, area:'奈良' },
-  { name:'馬渕教室 郡山校',      address:'奈良県大和郡山市今国府町27-2',         lat:34.6527, lng:135.7888, area:'奈良' },
-  { name:'馬渕教室 王寺校',      address:'奈良県北葛城郡王寺町久度2-2-1',       lat:34.5961, lng:135.7039, area:'奈良' },
-  { name:'馬渕教室 香芝本部校',  address:'奈良県香芝市西真美3-1-1',              lat:34.5617, lng:135.7129, area:'奈良' },
-  { name:'馬渕教室 香芝旭ヶ丘校',address:'奈良県香芝市旭ヶ丘4-4-1',             lat:34.5510, lng:135.7288, area:'奈良' },
-  { name:'馬渕教室 高田校',      address:'奈良県大和高田市本郷町13-20',          lat:34.5132, lng:135.7373, area:'奈良' },
-  { name:'馬渕教室 橿原校',      address:'奈良県橿原市八木町1-1-11',             lat:34.5086, lng:135.7954, area:'奈良' },
-  { name:'馬渕教室 八木本部校',  address:'奈良県橿原市大軽町209',                lat:34.5064, lng:135.7894, area:'奈良' },
-  { name:'馬渕教室 桜井校',      address:'奈良県桜井市桜井259-1',                lat:34.5218, lng:135.8446, area:'奈良' },
-  { name:'馬渕教室 天理校',      address:'奈良県天理市川原城町770',              lat:34.5962, lng:135.8370, area:'奈良' },
-  // 北摂（大阪）
-  { name:'馬渕教室 高槻本部校',  address:'大阪府高槻市白梅町4-1',               lat:34.8494, lng:135.6168, area:'大阪' },
-  { name:'馬渕教室 阪急茨木校',  address:'大阪府茨木市駅前3-3-11',              lat:34.8180, lng:135.5702, area:'大阪' },
-  { name:'馬渕教室 千里中央本部校',address:'大阪府豊中市新千里東町1-2-1',       lat:34.8009, lng:135.4869, area:'大阪' },
-  { name:'馬渕教室 豊中本部校',  address:'大阪府豊中市岡上の町4-1-1',           lat:34.7856, lng:135.4706, area:'大阪' },
-  { name:'馬渕教室 南千里校',    address:'大阪府吹田市古江台4-7',               lat:34.8129, lng:135.5031, area:'大阪' },
-  { name:'馬渕教室 豊津校',      address:'大阪府吹田市豊津町14-52',             lat:34.7710, lng:135.5126, area:'大阪' },
-  { name:'馬渕教室 JR茨木校',   address:'大阪府茨木市双葉町8-23',              lat:34.8167, lng:135.5656, area:'大阪' },
-  // 南大阪
-  { name:'馬渕教室 上本町本部校', address:'大阪府大阪市天王寺区上本町6-6-28',   lat:34.6626, lng:135.5195, area:'大阪' },
-  { name:'馬渕教室 天王寺校',    address:'大阪府大阪市阿倍野区阿倍野筋1-1-43', lat:34.6465, lng:135.5133, area:'大阪' },
-  { name:'馬渕教室 京橋本部校',  address:'大阪府大阪市城東区関目1-1-31',        lat:34.6902, lng:135.5419, area:'大阪' },
-  { name:'馬渕教室 帝塚山校',    address:'大阪府大阪市住吉区帝塚山中2-8-25',   lat:34.6232, lng:135.5044, area:'大阪' },
-  { name:'馬渕教室 新大阪校',    address:'大阪府大阪市淀川区西中島4-3-21',      lat:34.7337, lng:135.4972, area:'大阪' },
-  // 京都
-  { name:'馬渕教室 四条烏丸校',  address:'京都府京都市下京区烏丸通四条下ル',    lat:35.0036, lng:135.7580, area:'京都' },
-  { name:'馬渕教室 北大路校',    address:'京都府京都市北区小山北上総町3',        lat:35.0486, lng:135.7595, area:'京都' },
-  // 兵庫
-  { name:'馬渕教室 岡本校',      address:'兵庫県神戸市東灘区岡本2-15-1',        lat:34.7243, lng:135.2680, area:'兵庫' },
-  { name:'馬渕教室 元町校',      address:'兵庫県神戸市中央区元町通4-3-1',       lat:34.6890, lng:135.1760, area:'兵庫' },
-  { name:'馬渕教室 西宮北口校',  address:'兵庫県西宮市高松町14-2',              lat:34.7416, lng:135.3378, area:'兵庫' },
-  { name:'馬渕教室 芦屋校',      address:'兵庫県芦屋市精道町14-13',             lat:34.7287, lng:135.3038, area:'兵庫' },
-  // 滋賀
-  { name:'馬渕教室 草津校',      address:'滋賀県草津市大路2-1-1',               lat:35.0130, lng:135.9588, area:'滋賀' },
-  { name:'馬渕教室 南草津校',    address:'滋賀県草津市野路町1360',              lat:34.9863, lng:135.9628, area:'滋賀' },
-  { name:'馬渕教室 瀬田校',      address:'滋賀県大津市一里山5-25-6',            lat:34.9741, lng:135.9442, area:'滋賀' },
+const MABUCHI_SCHOOLS_RAW = [
+  { name:'馬渕教室 新大宮校',      address:'奈良県奈良市芝辻町2-11-5',                area:'奈良' },
+  { name:'馬渕教室 学園前校',      address:'奈良県奈良市学園北1丁目9-1',             area:'奈良' },
+  { name:'馬渕教室 登美ヶ丘校',    address:'奈良県奈良市右京1丁目1-1',               area:'奈良' },
+  { name:'馬渕教室 富雄校',        address:'奈良県奈良市富雄元町2丁目1-3',           area:'奈良' },
+  { name:'馬渕教室 高の原校',      address:'京都府木津川市相楽台1丁目1',             area:'奈良' },
+  { name:'馬渕教室 白庭台校',      address:'奈良県生駒市白庭台4丁目6-1',             area:'奈良' },
+  { name:'馬渕教室 生駒校',        address:'奈良県生駒市元町1丁目1-3',               area:'奈良' },
+  { name:'馬渕教室 郡山校',        address:'奈良県大和郡山市今国府町27-2',           area:'奈良' },
+  { name:'馬渕教室 王寺校',        address:'奈良県北葛城郡王寺町久度2丁目2-1',       area:'奈良' },
+  { name:'馬渕教室 香芝本部校',    address:'奈良県香芝市西真美3丁目1-1',             area:'奈良' },
+  { name:'馬渕教室 香芝旭ヶ丘校',  address:'奈良県香芝市旭ヶ丘4丁目4-1',             area:'奈良' },
+  { name:'馬渕教室 高田校',        address:'奈良県大和高田市本郷町13-20',            area:'奈良' },
+  { name:'馬渕教室 橿原校',        address:'奈良県橿原市八木町1丁目1-11',            area:'奈良' },
+  { name:'馬渕教室 八木本部校',    address:'奈良県橿原市大軽町209',                  area:'奈良' },
+  { name:'馬渕教室 桜井校',        address:'奈良県桜井市桜井259-1',                  area:'奈良' },
+  { name:'馬渕教室 天理校',        address:'奈良県天理市川原城町770',                area:'奈良' },
+  { name:'馬渕教室 高槻本部校',    address:'大阪府高槻市白梅町4-1',                  area:'大阪' },
+  { name:'馬渕教室 阪急茨木校',    address:'大阪府茨木市駅前3丁目3-11',              area:'大阪' },
+  { name:'馬渕教室 千里中央本部校',address:'大阪府豊中市新千里東町1丁目2-1',         area:'大阪' },
+  { name:'馬渕教室 豊中本部校',    address:'大阪府豊中市岡上の町4丁目1-1',           area:'大阪' },
+  { name:'馬渕教室 南千里校',      address:'大阪府吹田市古江台4丁目7',               area:'大阪' },
+  { name:'馬渕教室 豊津校',        address:'大阪府吹田市豊津町14-52',                area:'大阪' },
+  { name:'馬渕教室 JR茨木校',     address:'大阪府茨木市双葉町8-23',                 area:'大阪' },
+  { name:'馬渕教室 上本町本部校',  address:'大阪府大阪市天王寺区上本町6丁目6-28',    area:'大阪' },
+  { name:'馬渕教室 天王寺校',      address:'大阪府大阪市阿倍野区阿倍野筋1丁目1-43', area:'大阪' },
+  { name:'馬渕教室 京橋本部校',    address:'大阪府大阪市城東区関目1丁目1-31',        area:'大阪' },
+  { name:'馬渕教室 帝塚山校',      address:'大阪府大阪市住吉区帝塚山中2丁目8-25',   area:'大阪' },
+  { name:'馬渕教室 新大阪校',      address:'大阪府大阪市淀川区西中島4丁目3-21',      area:'大阪' },
+  { name:'馬渕教室 四条烏丸校',    address:'京都府京都市下京区烏丸通四条下ル',        area:'京都' },
+  { name:'馬渕教室 北大路校',      address:'京都府京都市北区小山北上総町3',           area:'京都' },
+  { name:'馬渕教室 岡本校',        address:'兵庫県神戸市東灘区岡本2丁目15-1',        area:'兵庫' },
+  { name:'馬渕教室 元町校',        address:'兵庫県神戸市中央区元町通4丁目3-1',       area:'兵庫' },
+  { name:'馬渕教室 西宮北口校',    address:'兵庫県西宮市高松町14-2',                 area:'兵庫' },
+  { name:'馬渕教室 芦屋校',        address:'兵庫県芦屋市精道町14-13',                area:'兵庫' },
+  { name:'馬渕教室 草津校',        address:'滋賀県草津市大路2丁目1-1',               area:'滋賀' },
+  { name:'馬渕教室 南草津校',      address:'滋賀県草津市野路町1360',                 area:'滋賀' },
+  { name:'馬渕教室 瀬田校',        address:'滋賀県大津市一里山5丁目25-6',            area:'滋賀' },
 ];
 
+// 解決済み座標キャッシュ（sessionStorage で永続化）
+const GEO_CACHE_KEY = 'mabuchi_geo_v1';
+let geoCache = {};
+try { geoCache = JSON.parse(sessionStorage.getItem(GEO_CACHE_KEY) || '{}'); } catch(_) {}
+
+async function geocodeSchool(school) {
+  if (geoCache[school.address]) {
+    return { ...school, ...geoCache[school.address] };
+  }
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(school.address)}&format=json&limit=1&countrycodes=jp&accept-language=ja`;
+  try {
+    const res  = await fetch(url, { headers: { 'User-Agent': 'mabuchi-finder/1.0' } });
+    const data = await res.json();
+    if (data.length) {
+      const lat = parseFloat(data[0].lat);
+      const lng = parseFloat(data[0].lon);
+      geoCache[school.address] = { lat, lng };
+      try { sessionStorage.setItem(GEO_CACHE_KEY, JSON.stringify(geoCache)); } catch(_) {}
+      return { ...school, lat, lng };
+    }
+  } catch(_) {}
+  return null; // 解決できなかった場合はスキップ
+}
+
 /* ────────────────────────────────────────────
-   静的データから近い教室を返す
+   Nominatimで座標解決してから近い教室を返す
 ──────────────────────────────────────────── */
-async function fetchMabuchi(lat, lng, radiusM = 50000) {
+async function fetchMabuchi(userLat, userLng, radiusM = 50000) {
   const radiusKm = radiusM / 1000;
-  return MABUCHI_SCHOOLS
-    .map(s => ({ ...s, dist: haversine(lat, lng, s.lat, s.lng) }))
+
+  // まずキャッシュ済みのものだけで即時表示候補を作る
+  const cached = MABUCHI_SCHOOLS_RAW
+    .filter(s => geoCache[s.address])
+    .map(s => ({ ...s, ...geoCache[s.address], dist: haversine(userLat, userLng, geoCache[s.address].lat, geoCache[s.address].lng) }))
+    .filter(s => s.dist <= radiusKm);
+
+  // 未解決のものをNominatimで順次解決（レートリミット: 1req/sec）
+  const unresolved = MABUCHI_SCHOOLS_RAW.filter(s => !geoCache[s.address]);
+  const resolved = [];
+  for (const s of unresolved) {
+    const result = await geocodeSchool(s);
+    if (result) resolved.push(result);
+    await new Promise(r => setTimeout(r, 1100)); // 1.1秒待つ
+  }
+
+  // 全部まとめて距離計算・フィルタ・ソート
+  const all = [
+    ...MABUCHI_SCHOOLS_RAW
+      .filter(s => geoCache[s.address])
+      .map(s => ({ ...s, ...geoCache[s.address] })),
+    ...resolved
+  ];
+
+  return all
+    .map(s => ({ ...s, dist: haversine(userLat, userLng, s.lat, s.lng) }))
     .filter(s => s.dist <= radiusKm)
     .sort((a, b) => a.dist - b.dist);
 }
@@ -765,7 +807,12 @@ async function doSearch() {
       map.setView([lat, lng], 12);
     }
 
-    setStatus('校舎データを絞り込み中...', 'loading');
+    const unresolved = MABUCHI_SCHOOLS_RAW.filter(s => !geoCache[s.address]).length;
+    if (unresolved > 0) {
+      setStatus(`座標を取得中... (${MABUCHI_SCHOOLS_RAW.length}校・初回のみ約${Math.ceil(unresolved * 1.1)}秒)`, 'loading');
+    } else {
+      setStatus('校舎データを絞り込み中...', 'loading');
+    }
     const places = await fetchMabuchi(lat, lng, radiusM);
 
     places.slice(0, count).forEach((p, i) => addMarker(p, i));
