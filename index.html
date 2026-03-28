@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <title>馬渕教室ファインダー</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f5f2ec;
+      --surface:   #fdfcf9;
+      --ink:       #1a1713;
+      --ink-2:     #6b6760;
+      --ink-3:     #a8a49e;
+      --accent:    #c84b2f;
+      --accent-lt: #f5e8e4;
+      --border:    #dedad3;
+      --radius:    6px;
+      --mono:      'DM Mono', monospace;
+      --serif:     'Noto Serif JP', serif;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: var(--serif);
+      background: var(--bg);
+      color: var(--ink);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── header ── */
+    header {
+      background: var(--ink);
+      color: var(--bg);
+      padding: 1.1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    header::after {
+      content: '';
+      position: absolute;
+      right: -30px; top: -30px;
+      width: 150px; height: 150px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.13;
+      pointer-events: none;
+    }
+    .h-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      margin-bottom: 3px;
+    }
+    header h1 {
+      font-size: 19px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+    header h1 span { color: var(--accent); }
+    .h-badge {
+      margin-left: auto;
+      font-family: var(--mono);
+      font-size: 9px;
+      padding: 3px 8px;
+      border-radius: 99px;
+      border: 1px solid #3a3630;
+      color: var(--ink-3);
+      letter-spacing: 0.08em;
+    }
+
+    /* ── layout ── */
+    .app {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ── sidebar ── */
+    .sidebar {
+      width: 330px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+    }
+
+
+    .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+    .field label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-2);
+    }
+    .field input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 9px 11px;
+      font-family: var(--serif);
+      font-size: 14px;
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+    .field input:focus { border-color: var(--accent); }
+    .field input::placeholder { color: var(--ink-3); }
+
+    /* ── search sections ── */
+    .section-heading {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      margin-bottom: 8px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid var(--border);
+    }
+    .search-section {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .search-section:last-of-type {
+      border-bottom: none;
+    }
+    .field-row { display: flex; gap: 8px; }
+    .field-row .field { flex: 1; }
+
+    .field select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 9px 11px;
+      font-family: var(--serif);
+      font-size: 13px;
+      color: var(--ink);
+      outline: none;
+      width: 100%;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23a8a49e'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+    }
+    .field select:focus { border-color: var(--accent); }
+
+    .btn-row { display: flex; gap: 7px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+      padding: 9px 14px;
+      border-radius: var(--radius);
+      font-family: var(--mono);
+      font-size: 12px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background 0.15s, transform 0.1s, opacity 0.15s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--accent); color: #fff; flex: 1; }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-ghost { background: transparent; color: var(--ink); border-color: var(--border); }
+    .btn-ghost:hover { background: var(--bg); }
+
+    #status {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 6px 0 0;
+      min-height: 20px;
+      color: var(--ink-2);
+    }
+    #status.loading { color: var(--accent); }
+    #status.error   { color: #c84b2f; }
+    #status.ok      { color: #2d8a55; }
+
+    .spin {
+      display: inline-block;
+      width: 9px; height: 9px;
+      border: 1.5px solid var(--accent);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 5px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── result list ── */
+    #results { flex: 1; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 0.8rem 0.95rem;
+      display: flex;
+      gap: 10px;
+      cursor: pointer;
+      transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
+      animation: fadeUp 0.3s ease both;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .result-card:nth-child(2) { animation-delay: 0.05s; }
+    .result-card:nth-child(3) { animation-delay: 0.10s; }
+    .result-card:nth-child(4) { animation-delay: 0.15s; }
+    .result-card:nth-child(5) { animation-delay: 0.20s; }
+    .result-card:hover { box-shadow: 0 3px 14px rgba(0,0,0,0.08); transform: translateY(-1px); }
+    .result-card.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-lt); }
+
+    .rank-badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+      background: var(--accent-lt);
+      color: var(--accent);
+      border: 1px solid #e8c2ba;
+    }
+    .result-card.first .rank-badge { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .card-body { flex: 1; min-width: 0; }
+    .card-name {
+      font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .card-address { font-family: var(--mono); font-size: 10px; color: var(--ink-2); margin-bottom: 6px; line-height: 1.5; }
+    .card-meta { display: flex; gap: 5px; flex-wrap: wrap; }
+    .tag {
+      font-family: var(--mono); font-size: 10px;
+      padding: 2px 7px; border-radius: 99px;
+      border: 1px solid var(--border); color: var(--ink-2);
+    }
+    .tag.dist   { border-color: #b3d9c9; color: #1e6e46; background: #edf7f2; }
+    .map-link {
+      font-family: var(--mono); font-size: 10px; color: var(--accent);
+      text-decoration: none; margin-top: 7px; display: inline-flex; align-items: center; gap: 3px;
+    }
+    .map-link:hover { opacity: 0.75; }
+
+    .empty {
+      text-align: center; padding: 2.5rem 1rem;
+      color: var(--ink-2); font-family: var(--mono); font-size: 12px; line-height: 1.9;
+    }
+    .empty strong { display: block; font-size: 14px; color: var(--ink); margin-bottom: 6px; }
+
+    /* ── map ── */
+    #map { flex: 1; min-width: 0; background: #e8e4dd; }
+
+    /* Leaflet popup カスタム */
+    .leaflet-popup-content-wrapper {
+      border-radius: 9px !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.12) !important;
+      font-family: 'Noto Serif JP', serif !important;
+      padding: 0 !important;
+    }
+    .leaflet-popup-content { margin: 0 !important; }
+    .popup-body { padding: 12px 14px; min-width: 190px; }
+    .popup-name { font-size: 13px; font-weight: 600; color: #1a1713; margin-bottom: 3px; }
+    .popup-addr { font-size: 10px; color: #6b6760; font-family: 'DM Mono', monospace; margin-bottom: 5px; line-height: 1.5; }
+    .popup-dist { font-size: 10px; color: #1e6e46; font-family: 'DM Mono', monospace; margin-bottom: 7px; }
+    .popup-link { font-size: 10px; color: #c84b2f; font-family: 'DM Mono', monospace; text-decoration: none; }
+    .popup-link:hover { opacity: 0.75; }
+
+    /* responsive */
+    @media (max-width: 640px) {
+      .app { flex-direction: column; }
+      .sidebar { width: 100%; max-height: 44vh; border-right: none; border-bottom: 1px solid var(--border); }
+      #map { min-height: 56vw; }
+    }
+
+    /* ── gate overlay ── */
+    #gate {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--ink);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #gate.hidden { display: none; }
+    .gate-box { text-align: center; animation: fadeUp 0.5s ease both; }
+    .gate-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      margin-bottom: 10px;
+    }
+    .gate-title {
+      font-size: clamp(22px, 5vw, 30px);
+      font-weight: 600;
+      color: var(--bg);
+      margin-bottom: 32px;
+      letter-spacing: -0.01em;
+    }
+    .gate-title span { color: var(--accent); }
+    .gate-input {
+      background: transparent;
+      border: none;
+      border-bottom: 1.5px solid #3a3630;
+      padding: 10px 4px;
+      font-family: var(--mono);
+      font-size: 16px;
+      color: var(--bg);
+      width: 260px;
+      text-align: center;
+      outline: none;
+      letter-spacing: 0.05em;
+      transition: border-color 0.2s;
+      caret-color: var(--accent);
+    }
+    .gate-input:focus { border-color: var(--accent); }
+    .gate-input::placeholder { color: var(--ink-3); font-size: 13px; }
+    .gate-hint {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink-3);
+      margin-top: 14px;
+      min-height: 18px;
+      transition: color 0.2s;
+    }
+    .gate-hint.err { color: var(--accent); animation: shake 0.3s ease; }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25%      { transform: translateX(-6px); }
+      75%      { transform: translateX(6px); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ゲートオーバーレイ -->
+<div id="gate">
+  <div class="gate-box">
+    <div class="gate-label">アクセスコード</div>
+    <div class="gate-title">馬渕教室<span>ファインダー</span></div>
+    <input id="gateInput" class="gate-input" type="text"
+           placeholder="合言葉を入力してください" autocomplete="off" />
+    <div id="gateHint" class="gate-hint">Enter で確認</div>
+  </div>
+</div>
+
+<header>
+  <div>
+    <div class="h-label">学習塾ロケーター</div>
+    <h1>馬渕教室<span>ファインダー</span></h1>
+  </div>
+  <div class="h-badge">OSM · 無料</div>
+</header>
+
+<div class="app">
+  <aside class="sidebar">
+    <!-- 検索範囲セクション -->
+    <div class="search-section">
+      <div class="section-heading">検索範囲</div>
+      <div class="field">
+        <label>住所・地名</label>
+        <input type="text" id="addr" placeholder="例: 大阪市北区梅田1-1" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>検索半径</label>
+          <select id="radius">
+            <option value="5000">5 km</option>
+            <option value="10000">10 km</option>
+            <option value="20000">20 km</option>
+            <option value="50000" selected>50 km</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>表示件数</label>
+          <input type="number" id="count" value="5" min="1" max="20" />
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="searchBtn" onclick="doSearch()">検索 →</button>
+      </div>
+    </div>
+
+    <!-- 現在地セクション -->
+    <div class="search-section">
+      <div class="section-heading">現在地</div>
+      <button class="btn btn-ghost" style="width:100%;" id="gpsBtn" onclick="useGPS()">
+        📍 現在地を取得して検索
+      </button>
+    </div>
+
+    <div style="padding: 6px 1rem 0; background: var(--surface);">
+      <div id="status"></div>
+    </div>
+    <div id="results"></div>
+  </aside>
+
+  <div id="map"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/* ────────────────────────────────────────────
+   ゲート（合言葉チェック）
+   localStorage に認証済みフラグを保存して
+   初回のみ表示する
+──────────────────────────────────────────── */
+(function() {
+  const STORAGE_KEY = 'mabuchi_unlocked';
+  const PASSPHRASE  = 'i love mabuchi'; // 小文字に統一して比較
+
+  const gate  = document.getElementById('gate');
+  const input = document.getElementById('gateInput');
+  const hint  = document.getElementById('gateHint');
+
+  // 既に認証済みならすぐ非表示
+  if (localStorage.getItem(STORAGE_KEY) === '1') {
+    gate.classList.add('hidden');
+    return;
+  }
+
+  // 自動フォーカス
+  input.focus();
+
+  function tryUnlock() {
+    const val = input.value.trim().toLowerCase();
+    if (val === PASSPHRASE) {
+      localStorage.setItem(STORAGE_KEY, '1');
+      gate.style.transition = 'opacity 0.4s ease';
+      gate.style.opacity = '0';
+      setTimeout(() => gate.classList.add('hidden'), 400);
+    } else {
+      hint.textContent = '合言葉が違います';
+      hint.classList.add('err');
+      input.value = '';
+      setTimeout(() => {
+        hint.textContent = 'Enter で確認';
+        hint.classList.remove('err');
+      }, 1500);
+    }
+  }
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') tryUnlock();
+  });
+})();
+
+/* ────────────────────────────────────────────
+   状態変数
+──────────────────────────────────────────── */
+let map, markers = [], userMarker = null;
+let userLat = null, userLng = null;
+let activeCard = null;
+
+/* ────────────────────────────────────────────
+   Leaflet マップ初期化
+──────────────────────────────────────────── */
+map = L.map('map', { zoomControl: true }).setView([34.7024, 135.4959], 11);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 19
+}).addTo(map);
+
+/* ────────────────────────────────────────────
+   カスタムマーカーアイコン生成
+──────────────────────────────────────────── */
+function makeIcon(num, isFirst) {
+  const bg     = isFirst ? '#c84b2f' : '#fdfcf9';
+  const color  = isFirst ? '#fff'    : '#c84b2f';
+  const stroke = '#c84b2f';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+    <circle cx="16" cy="16" r="13" fill="${bg}" stroke="${stroke}" stroke-width="2"/>
+    <text x="16" y="20.5" text-anchor="middle" font-size="12" font-weight="600"
+          font-family="DM Mono,monospace" fill="${color}">${num}</text>
+  </svg>`;
+  return L.divIcon({
+    html: svg,
+    className: '',
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -18]
+  });
+}
+
+function makeUserIcon() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">
+    <circle cx="11" cy="11" r="8" fill="#c84b2f" stroke="#fff" stroke-width="2.5"/>
+  </svg>`;
+  return L.divIcon({ html: svg, className: '', iconSize: [22, 22], iconAnchor: [11, 11] });
+}
+
+/* ────────────────────────────────────────────
+   GPS 現在地取得
+──────────────────────────────────────────── */
+function useGPS() {
+  if (!navigator.geolocation) { setStatus('位置情報非対応のブラウザです', 'error'); return; }
+  const btn = document.getElementById('gpsBtn');
+  btn.disabled = true;
+  setStatus('現在地を取得中...', 'loading');
+  navigator.geolocation.getCurrentPosition(pos => {
+    userLat = pos.coords.latitude;
+    userLng = pos.coords.longitude;
+    document.getElementById('addr').value = '';
+    document.getElementById('addr').placeholder =
+      `現在地 (${userLat.toFixed(4)}, ${userLng.toFixed(4)})`;
+    placeUserMarker(userLat, userLng);
+    map.setView([userLat, userLng], 12);
+    btn.disabled = false;
+    // GPS取得後に自動で馬渕教室を検索
+    doSearch();
+  }, err => {
+    setStatus('位置情報の取得に失敗: ' + err.message, 'error');
+    btn.disabled = false;
+  });
+}
+
+function placeUserMarker(lat, lng) {
+  if (userMarker) userMarker.remove();
+  userMarker = L.marker([lat, lng], { icon: makeUserIcon(), zIndexOffset: 1000 })
+    .addTo(map)
+    .bindTooltip('検索地点', { permanent: false, direction: 'top' });
+}
+
+/* ────────────────────────────────────────────
+   Nominatim ジオコーディング
+──────────────────────────────────────────── */
+async function geocodeAddress(addr) {
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1&accept-language=ja&countrycodes=jp`;
+  const res = await fetch(url, { headers: { 'Accept-Language': 'ja' } });
+  const data = await res.json();
+  if (!data.length) throw new Error(`「${addr}」の住所が見つかりませんでした`);
+  return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+}
+
+/* ────────────────────────────────────────────
+   Overpass API で馬渕教室を検索
+──────────────────────────────────────────── */
+async function fetchMabuchi(lat, lng, radiusM = 50000) {
+  const query = `
+    [out:json][timeout:25];
+    (
+      node["name"~"馬渕教室",i](around:${radiusM},${lat},${lng});
+      way["name"~"馬渕教室",i](around:${radiusM},${lat},${lng});
+      node["amenity"~"school|tutoring|cram_school"]["name"~"馬渕",i](around:${radiusM},${lat},${lng});
+    );
+    out center;
+  `.trim();
+
+  const endpoints = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
+  ];
+
+  let data = null;
+  let lastError = '';
+
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'data=' + encodeURIComponent(query)
+      });
+      const text = await res.text();
+      if (!text.trim().startsWith('{')) {
+        lastError = endpoint + ' が不正なレスポンスを返しました';
+        continue;
+      }
+      data = JSON.parse(text);
+      break;
+    } catch (e) {
+      lastError = e.message;
+      continue;
+    }
+  }
+
+  if (!data) throw new Error('Overpass API に接続できませんでした: ' + lastError);
+
+  return (data.elements || []).map(el => {
+    const elLat = el.lat ?? el.center?.lat;
+    const elLng = el.lon ?? el.center?.lon;
+    const tags  = el.tags || {};
+    return {
+      name:    tags.name || '馬渕教室',
+      address: buildAddress(tags),
+      lat:     elLat,
+      lng:     elLng,
+      dist:    haversine(lat, lng, elLat, elLng),
+      osmId:   el.id
+    };
+  }).filter(p => p.lat && p.lng)
+    .sort((a, b) => a.dist - b.dist);
+}
+
+function buildAddress(tags) {
+  const parts = [
+    tags['addr:province'] || tags['addr:prefecture'],
+    tags['addr:city'],
+    tags['addr:suburb'],
+    tags['addr:street'],
+    tags['addr:housenumber']
+  ].filter(Boolean);
+  return parts.join('') || tags['addr:full'] || '';
+}
+
+/* ────────────────────────────────────────────
+   距離計算
+──────────────────────────────────────────── */
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371, r = Math.PI / 180;
+  const dLat = (lat2 - lat1) * r, dLng = (lng2 - lng1) * r;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*r)*Math.cos(lat2*r)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function distLabel(km) {
+  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+}
+
+/* ────────────────────────────────────────────
+   マーカー描画
+──────────────────────────────────────────── */
+function clearMarkers() {
+  markers.forEach(m => m.remove());
+  markers = [];
+}
+
+function addMarker(place, index) {
+  const marker = L.marker([place.lat, place.lng], {
+    icon: makeIcon(index + 1, index === 0),
+    zIndexOffset: 100 - index
+  }).addTo(map);
+
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name + ' ' + place.address)}`;
+  marker.bindPopup(`
+    <div class="popup-body">
+      <div class="popup-name">${place.name}</div>
+      ${place.address ? `<div class="popup-addr">${place.address}</div>` : ''}
+      <div class="popup-dist">📍 ${distLabel(place.dist)}</div>
+      <a class="popup-link" href="${mapsUrl}" target="_blank" rel="noopener">
+        Google マップで開く →
+      </a>
+    </div>`);
+
+  marker.on('click', () => activateCard(index));
+  markers.push(marker);
+  return marker;
+}
+
+/* ────────────────────────────────────────────
+   カード描画
+──────────────────────────────────────────── */
+function renderCards(places, count) {
+  const container = document.getElementById('results');
+  if (!places.length) {
+    container.innerHTML = `
+      <div class="empty">
+        <strong>見つかりませんでした</strong>
+        馬渕教室は主に関西圏に展開しています。<br>
+        大阪・兵庫・京都・奈良の住所で<br>
+        再検索してみてください。
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = places.slice(0, count).map((p, i) => {
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name + ' ' + p.address)}`;
+    return `
+      <div class="result-card ${i === 0 ? 'first' : ''}" id="card-${i}"
+           onclick="cardClick(${i})">
+        <div class="rank-badge">${i + 1}</div>
+        <div class="card-body">
+          <div class="card-name">${p.name}</div>
+          ${p.address ? `<div class="card-address">${p.address}</div>` : ''}
+          <div class="card-meta">
+            <span class="tag dist">📍 ${distLabel(p.dist)}</span>
+          </div>
+          <a class="map-link" href="${mapsUrl}" target="_blank" rel="noopener"
+             onclick="event.stopPropagation()">
+            Google マップで開く →
+          </a>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function activateCard(index) {
+  if (activeCard !== null) {
+    document.getElementById('card-' + activeCard)?.classList.remove('active');
+  }
+  activeCard = index;
+  const el = document.getElementById('card-' + index);
+  if (el) {
+    el.classList.add('active');
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function cardClick(index) {
+  activateCard(index);
+  const m = markers[index];
+  if (m) {
+    map.setView(m.getLatLng(), 15, { animate: true });
+    m.openPopup();
+  }
+}
+
+/* ────────────────────────────────────────────
+   ステータス表示
+──────────────────────────────────────────── */
+function setStatus(msg, type = '') {
+  const el = document.getElementById('status');
+  el.className = 'status ' + type;
+  el.innerHTML = type === 'loading'
+    ? `<span class="spin"></span>${msg}`
+    : msg;
+}
+
+/* ────────────────────────────────────────────
+   メイン検索
+──────────────────────────────────────────── */
+async function doSearch() {
+  const addrVal = document.getElementById('addr').value.trim();
+  const count   = parseInt(document.getElementById('count').value) || 5;
+  const radiusM = parseInt(document.getElementById('radius').value) || 50000;
+  const btn     = document.getElementById('searchBtn');
+
+  if (!addrVal && userLat === null) {
+    setStatus('住所を入力するか「現在地」ボタンを押してください', 'error');
+    return;
+  }
+
+  document.getElementById('results').innerHTML = '';
+  clearMarkers();
+  activeCard   = null;
+  btn.disabled = true;
+
+  try {
+    let lat = userLat, lng = userLng;
+
+    if (addrVal) {
+      setStatus('住所を検索中...', 'loading');
+      ({ lat, lng } = await geocodeAddress(addrVal));
+      userLat = lat; userLng = lng;
+      placeUserMarker(lat, lng);
+      map.setView([lat, lng], 12);
+    }
+
+    setStatus('馬渕教室を検索中...', 'loading');
+    const places = await fetchMabuchi(lat, lng, radiusM);
+
+    places.slice(0, count).forEach((p, i) => addMarker(p, i));
+    renderCards(places, count);
+
+    if (places.length > 0) {
+      const bounds = L.latLngBounds([[lat, lng]]);
+      places.slice(0, count).forEach(p => bounds.extend([p.lat, p.lng]));
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+
+    const shown = Math.min(places.length, count);
+    setStatus(
+      places.length === 0
+        ? '見つかりませんでした'
+        : `${shown} 件表示 / 全 ${places.length} 件取得`,
+      places.length === 0 ? 'error' : 'ok'
+    );
+  } catch (e) {
+    setStatus(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* Enter キーで検索 */
+document.getElementById('addr').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+</script>
+</body>
+</html>
